@@ -47,7 +47,7 @@ func main() {
         }
     }
 }
-```go
+```
 
 Meta-fu
 =======
