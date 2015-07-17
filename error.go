@@ -58,9 +58,11 @@ var MaxStackDepth = 50
 // Error is an error with an attached stacktrace. It can be used
 // wherever the builtin error interface is expected.
 type Error struct {
-	Err    error
-	stack  []uintptr
-	frames []StackFrame
+	Err        error  `json:"error"`
+	ErrStack   string `json:"ErrStack"`
+	StackTrace string `json:"stackTrace"`
+	stack      []uintptr
+	frames     []StackFrame
 }
 
 // New makes an Error from the given value. If that value is already an
@@ -77,11 +79,15 @@ func New(e interface{}) *Error {
 		err = fmt.Errorf("%v", e)
 	}
 
-	stack := make([]uintptr, MaxStackDepth)
-	length := runtime.Callers(2, stack[:])
+	s := make([]uintptr, MaxStackDepth)
+	length := runtime.Callers(2, s[:])
+	f := stackFrames(s[:length])
 	return &Error{
-		Err:   err,
-		stack: stack[:length],
+		Err:        err,
+		stack:      s[:length],
+		frames:     f,
+		StackTrace: string(stack(f)),
+		ErrStack:   errorStack(typeName(err), err, stack(f)),
 	}
 }
 
@@ -101,11 +107,15 @@ func Wrap(e interface{}, skip int) *Error {
 		err = fmt.Errorf("%v", e)
 	}
 
-	stack := make([]uintptr, MaxStackDepth)
-	length := runtime.Callers(2+skip, stack[:])
+	s := make([]uintptr, MaxStackDepth)
+	length := runtime.Callers(2+skip, s[:])
+	f := stackFrames(s[:length])
 	return &Error{
-		Err:   err,
-		stack: stack[:length],
+		Err:        err,
+		stack:      s[:length],
+		frames:     f,
+		StackTrace: string(stack(f)),
+		ErrStack:   errorStack(typeName(err), err, stack(f)),
 	}
 }
 
@@ -144,9 +154,16 @@ func (err *Error) Error() string {
 // Stack returns the callstack formatted the same way that go does
 // in runtime/debug.Stack()
 func (err *Error) Stack() []byte {
+	if err.frames == nil {
+		err.frames = err.StackFrames()
+	}
+	return stack(err.frames)
+}
+
+func stack(frames []StackFrame) []byte {
 	buf := bytes.Buffer{}
 
-	for _, frame := range err.StackFrames() {
+	for _, frame := range frames {
 		buf.WriteString(frame.String())
 	}
 
@@ -156,18 +173,26 @@ func (err *Error) Stack() []byte {
 // ErrorStack returns a string that contains both the
 // error message and the callstack.
 func (err *Error) ErrorStack() string {
-	return err.TypeName() + " " + err.Error() + "\n" + string(err.Stack())
+	return errorStack(err.TypeName(), err, err.Stack())
+}
+
+func errorStack(t string, err error, s []byte) string {
+	return t + " " + err.Error() + "\n" + string(s)
+}
+
+func stackFrames(stack []uintptr) []StackFrame {
+	frames := make([]StackFrame, len(stack))
+	for i, pc := range stack {
+		frames[i] = NewStackFrame(pc)
+	}
+	return frames
 }
 
 // StackFrames returns an array of frames containing information about the
 // stack.
 func (err *Error) StackFrames() []StackFrame {
 	if err.frames == nil {
-		err.frames = make([]StackFrame, len(err.stack))
-
-		for i, pc := range err.stack {
-			err.frames[i] = NewStackFrame(pc)
-		}
+		err.frames = stackFrames(err.stack)
 	}
 
 	return err.frames
@@ -175,8 +200,12 @@ func (err *Error) StackFrames() []StackFrame {
 
 // TypeName returns the type this error. e.g. *errors.stringError.
 func (err *Error) TypeName() string {
-	if _, ok := err.Err.(uncaughtPanic); ok {
+	return typeName(err.Err)
+}
+
+func typeName(err error) string {
+	if _, ok := err.(uncaughtPanic); ok {
 		return "panic"
 	}
-	return reflect.TypeOf(err.Err).String()
+	return reflect.TypeOf(err).String()
 }

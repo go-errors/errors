@@ -56,9 +56,7 @@ func TestSkipWorks(t *testing.T) {
 }
 
 func TestNew(t *testing.T) {
-
 	err := New("foo")
-
 	if err.Error() != "foo" {
 		t.Errorf("Wrong message")
 	}
@@ -68,7 +66,7 @@ func TestNew(t *testing.T) {
 	if err.Error() != "foo" {
 		t.Errorf("Wrong message")
 	}
-
+	fmt.Println(err.ErrStack)
 	bs := [][]byte{New("foo").Stack(), debug.Stack()}
 
 	// Ignore the first line (as it contains the PC of the .Stack() call)
@@ -79,6 +77,14 @@ func TestNew(t *testing.T) {
 		t.Errorf("Stack didn't match")
 		t.Errorf("%s", bs[0])
 		t.Errorf("%s", bs[1])
+	}
+
+	if err.ErrStack == "" {
+		t.Errorf("ErrStack should not be empty")
+	}
+
+	if err.StackTrace == "" {
+		t.Errorf("StackTrace should not be empty")
 	}
 
 	if err.ErrorStack() != err.TypeName()+" "+err.Error()+"\n"+string(err.Stack()) {
