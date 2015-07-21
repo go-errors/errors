@@ -29,7 +29,10 @@ func TestStackFormatMatches(t *testing.T) {
 		}
 	}()
 
-	a()
+	err := a()
+	if err != nil {
+		t.Error(err)
+	}
 }
 
 func TestSkipWorks(t *testing.T) {
@@ -52,7 +55,10 @@ func TestSkipWorks(t *testing.T) {
 		}
 	}()
 
-	a()
+	err := a()
+	if err != nil {
+		t.Error(err)
+	}
 }
 
 func TestNew(t *testing.T) {

@@ -48,6 +48,7 @@ package errors
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"reflect"
 	"runtime"
 )
@@ -93,6 +94,8 @@ func New(e interface{}) *Error {
 	}
 }
 
+// Custom is the same as New but allows you to override the Description and
+// Title fields of the Error Struct.
 func Custom(e interface{}, desc, title string) *Error {
 	var err error
 	switch e := e.(type) {
@@ -173,7 +176,7 @@ func (err *Error) Error() string {
 	return err.Err.Error()
 }
 
-// Stack returns the callstack formatted the same way that go does
+// StackTrace returns the callstack formatted the same way that go does
 // in runtime/debug.Stack()
 func (err *Error) StackTrace() []byte {
 	if err.frames == nil {
@@ -186,7 +189,10 @@ func stack(frames []StackFrame) []byte {
 	buf := bytes.Buffer{}
 
 	for _, frame := range frames {
-		buf.WriteString(frame.String())
+		_, err := buf.WriteString(frame.String())
+		if err != nil {
+			log.Panic(err)
+		}
 	}
 
 	return buf.Bytes()
