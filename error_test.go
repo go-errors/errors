@@ -16,7 +16,7 @@ func TestStackFormatMatches(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		bs := [][]byte{Errorf("hi").Stack(), debug.Stack()}
+		bs := [][]byte{Errorf("hi").StackTrace(), debug.Stack()}
 
 		// Ignore the first line (as it contains the PC of the .Stack() call)
 		bs[0] = bytes.SplitN(bs[0], []byte("\n"), 2)[1]
@@ -29,7 +29,10 @@ func TestStackFormatMatches(t *testing.T) {
 		}
 	}()
 
-	a()
+	err := a()
+	if err != nil {
+		t.Error(err)
+	}
 }
 
 func TestSkipWorks(t *testing.T) {
@@ -40,7 +43,7 @@ func TestSkipWorks(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		bs := [][]byte{Wrap("hi", 2).Stack(), debug.Stack()}
+		bs := [][]byte{Wrap("hi", 2).StackTrace(), debug.Stack()}
 
 		// should skip four lines of debug.Stack()
 		bs[1] = bytes.SplitN(bs[1], []byte("\n"), 5)[4]
@@ -52,13 +55,14 @@ func TestSkipWorks(t *testing.T) {
 		}
 	}()
 
-	a()
+	err := a()
+	if err != nil {
+		t.Error(err)
+	}
 }
 
 func TestNew(t *testing.T) {
-
 	err := New("foo")
-
 	if err.Error() != "foo" {
 		t.Errorf("Wrong message")
 	}
@@ -68,8 +72,7 @@ func TestNew(t *testing.T) {
 	if err.Error() != "foo" {
 		t.Errorf("Wrong message")
 	}
-
-	bs := [][]byte{New("foo").Stack(), debug.Stack()}
+	bs := [][]byte{New("foo").StackTrace(), debug.Stack()}
 
 	// Ignore the first line (as it contains the PC of the .Stack() call)
 	bs[0] = bytes.SplitN(bs[0], []byte("\n"), 2)[1]
@@ -81,7 +84,11 @@ func TestNew(t *testing.T) {
 		t.Errorf("%s", bs[1])
 	}
 
-	if err.ErrorStack() != err.TypeName()+" "+err.Error()+"\n"+string(err.Stack()) {
+	if err.Stack == "" {
+		t.Errorf("ErrStack should not be empty")
+	}
+
+	if err.ErrorStack() != err.TypeName()+" "+err.Error()+"\n"+string(err.StackTrace()) {
 		t.Errorf("ErrorStack is in the wrong format")
 	}
 }
@@ -184,7 +191,7 @@ func ExampleError_ErrorStack(err error) {
 }
 
 func ExampleError_Stack(err *Error) {
-	fmt.Println(err.Stack())
+	fmt.Println(err.StackTrace())
 }
 
 func ExampleError_TypeName(err *Error) {
