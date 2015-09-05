@@ -61,6 +61,7 @@ type Error struct {
 	Err    error
 	stack  []uintptr
 	frames []StackFrame
+	prefix string
 }
 
 // New makes an Error from the given value. If that value is already an
@@ -109,6 +110,26 @@ func Wrap(e interface{}, skip int) *Error {
 	}
 }
 
+// WrapPrefix makes an Error from the given value. If that value is already an
+// error then it will be used directly, if not, it will be passed to
+// fmt.Errorf("%v"). The prefix parameter is used to add a prefix to the
+// error message when calling Error(). The skip parameter indicates how far
+// up the stack to start the stacktrace. 0 is from the current call,
+// 1 from its caller, etc.
+func WrapPrefix(e interface{}, prefix string, skip int) *Error {
+
+	err := Wrap(e, skip)
+
+	if err.prefix != "" {
+		err.prefix = fmt.Sprintf("%s: %s", prefix, err.prefix)
+	} else {
+		err.prefix = prefix
+	}
+
+	return err
+
+}
+
 // Is detects whether the error is equal to a given error. Errors
 // are considered equal by this function if they are the same object,
 // or if they both contain the same error inside an errors.Error.
@@ -138,7 +159,13 @@ func Errorf(format string, a ...interface{}) *Error {
 
 // Error returns the underlying error's message.
 func (err *Error) Error() string {
-	return err.Err.Error()
+
+	msg := err.Err.Error()
+	if err.prefix != "" {
+		msg = fmt.Sprintf("%s: %s", err.prefix, msg)
+	}
+
+	return msg
 }
 
 // Stack returns the callstack formatted the same way that go does
