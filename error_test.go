@@ -133,6 +133,33 @@ func TestWrapError(t *testing.T) {
 	}
 }
 
+func TestWrapPrefixError(t *testing.T) {
+
+	e := func() error {
+		return WrapPrefix("hi", "prefix", 1)
+	}()
+
+	fmt.Println(e.Error())
+	if e.Error() != "prefix: hi" {
+		t.Errorf("Constructor with a string failed")
+	}
+
+	if WrapPrefix(fmt.Errorf("yo"), "prefix", 0).Error() != "prefix: yo" {
+		t.Errorf("Constructor with an error failed")
+	}
+
+	prefixed := WrapPrefix(e, "prefix", 0)
+	original := e.(*Error)
+
+	if prefixed.Err != original.Err || &prefixed.stack != &original.stack || &prefixed.frames != &original.frames || prefixed.Error() != "prefix: prefix: hi" {
+		t.Errorf("Constructor with an Error failed")
+	}
+
+	if WrapPrefix(nil, "prefix", 0).Error() != "prefix: <nil>" {
+		t.Errorf("Constructor with nil failed")
+	}
+}
+
 func ExampleErrorf(x int) (int, error) {
 	if x%2 == 1 {
 		return 0, Errorf("can only halve even numbers, got %d", x)
