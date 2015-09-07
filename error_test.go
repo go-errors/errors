@@ -133,6 +133,28 @@ func TestWrapError(t *testing.T) {
 	}
 }
 
+// https://github.com/go-errors/errors/issues/3
+func TestNilError(t *testing.T) {
+
+	e := func() Error {
+		return nil
+	}()
+
+	var wrapped error
+	wrapped = func() *wrappedError {
+		return nil
+	}()
+
+	if e != nil {
+		t.Errorf("Error is not nil where it should be")
+	}
+
+	if wrapped == nil {
+		t.Errorf("*wrappedError is nil where it should not be")
+	}
+
+}
+
 func TestWrapPrefixError(t *testing.T) {
 
 	e := func() error {
