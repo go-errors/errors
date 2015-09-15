@@ -42,8 +42,8 @@ func TestSkipWorks(t *testing.T) {
 
 		bs := [][]byte{Wrap("hi", 2).Stack(), debug.Stack()}
 
-		// should skip four lines of debug.Stack()
-		bs[1] = bytes.SplitN(bs[1], []byte("\n"), 5)[4]
+		// should skip three lines of debug.Stack()
+		bs[1] = bytes.SplitN(bs[1], []byte("\n"), 4)[3]
 
 		if bytes.Compare(bs[0], bs[1]) != 0 {
 			t.Errorf("Stack didn't match")
