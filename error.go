@@ -98,6 +98,8 @@ func Wrap(e interface{}, skip int) *Error {
 		return e
 	case error:
 		err = e
+	case nil:
+		return nil
 	default:
 		err = fmt.Errorf("%v", e)
 	}
@@ -117,6 +119,9 @@ func Wrap(e interface{}, skip int) *Error {
 // up the stack to start the stacktrace. 0 is from the current call,
 // 1 from its caller, etc.
 func WrapPrefix(e interface{}, prefix string, skip int) *Error {
+	if e == nil {
+		return nil
+	}
 
 	err := Wrap(e, skip)
 
