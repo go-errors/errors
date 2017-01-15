@@ -57,8 +57,18 @@ var MaxStackDepth = 50
 
 // Error is an error with an attached stacktrace. It can be used
 // wherever the builtin error interface is expected.
-type Error struct {
-	Err    error
+type Error interface {
+	error
+	Underlying() error
+	Stack() []byte
+	ErrorStack() string
+	StackFrames() []StackFrame
+	TypeName() string
+}
+
+// wrappedError is an implementation of the Error interface.
+type wrappedError struct {
+	err    error
 	stack  []uintptr
 	frames []StackFrame
 	prefix string
@@ -68,7 +78,7 @@ type Error struct {
 // error then it will be used directly, if not, it will be passed to
 // fmt.Errorf("%v"). The stacktrace will point to the line of code that
 // called New.
-func New(e interface{}) *Error {
+func New(e interface{}) Error {
 	var err error
 
 	switch e := e.(type) {
@@ -80,8 +90,8 @@ func New(e interface{}) *Error {
 
 	stack := make([]uintptr, MaxStackDepth)
 	length := runtime.Callers(2, stack[:])
-	return &Error{
-		Err:   err,
+	return &wrappedError{
+		err:   err,
 		stack: stack[:length],
 	}
 }
@@ -90,11 +100,11 @@ func New(e interface{}) *Error {
 // error then it will be used directly, if not, it will be passed to
 // fmt.Errorf("%v"). The skip parameter indicates how far up the stack
 // to start the stacktrace. 0 is from the current call, 1 from its caller, etc.
-func Wrap(e interface{}, skip int) *Error {
+func Wrap(e interface{}, skip int) Error {
 	var err error
 
 	switch e := e.(type) {
-	case *Error:
+	case *wrappedError:
 		return e
 	case error:
 		err = e
@@ -104,8 +114,8 @@ func Wrap(e interface{}, skip int) *Error {
 
 	stack := make([]uintptr, MaxStackDepth)
 	length := runtime.Callers(2+skip, stack[:])
-	return &Error{
-		Err:   err,
+	return &wrappedError{
+		err:   err,
 		stack: stack[:length],
 	}
 }
@@ -116,9 +126,9 @@ func Wrap(e interface{}, skip int) *Error {
 // error message when calling Error(). The skip parameter indicates how far
 // up the stack to start the stacktrace. 0 is from the current call,
 // 1 from its caller, etc.
-func WrapPrefix(e interface{}, prefix string, skip int) *Error {
+func WrapPrefix(e interface{}, prefix string, skip int) Error {
 
-	err := Wrap(e, skip)
+	err := Wrap(e, skip).(*wrappedError)
 
 	if err.prefix != "" {
 		err.prefix = fmt.Sprintf("%s: %s", prefix, err.prefix)
@@ -139,12 +149,12 @@ func Is(e error, original error) bool {
 		return true
 	}
 
-	if e, ok := e.(*Error); ok {
-		return Is(e.Err, original)
+	if e, ok := e.(*wrappedError); ok {
+		return Is(e.err, original)
 	}
 
-	if original, ok := original.(*Error); ok {
-		return Is(e, original.Err)
+	if original, ok := original.(*wrappedError); ok {
+		return Is(e, original.err)
 	}
 
 	return false
@@ -153,14 +163,19 @@ func Is(e error, original error) bool {
 // Errorf creates a new error with the given message. You can use it
 // as a drop-in replacement for fmt.Errorf() to provide descriptive
 // errors in return values.
-func Errorf(format string, a ...interface{}) *Error {
+func Errorf(format string, a ...interface{}) Error {
 	return Wrap(fmt.Errorf(format, a...), 1)
 }
 
-// Error returns the underlying error's message.
-func (err *Error) Error() string {
+// Underlying returns the underlying error.
+func (err *wrappedError) Underlying() error {
+	return err.err
+}
 
-	msg := err.Err.Error()
+// Error returns the underlying error's message.
+func (err wrappedError) Error() string {
+
+	msg := err.err.Error()
 	if err.prefix != "" {
 		msg = fmt.Sprintf("%s: %s", err.prefix, msg)
 	}
@@ -170,7 +185,7 @@ func (err *Error) Error() string {
 
 // Stack returns the callstack formatted the same way that go does
 // in runtime/debug.Stack()
-func (err *Error) Stack() []byte {
+func (err wrappedError) Stack() []byte {
 	buf := bytes.Buffer{}
 
 	for _, frame := range err.StackFrames() {
@@ -188,13 +203,13 @@ func (err *Error) Callers() []uintptr {
 
 // ErrorStack returns a string that contains both the
 // error message and the callstack.
-func (err *Error) ErrorStack() string {
+func (err wrappedError) ErrorStack() string {
 	return err.TypeName() + " " + err.Error() + "\n" + string(err.Stack())
 }
 
 // StackFrames returns an array of frames containing information about the
 // stack.
-func (err *Error) StackFrames() []StackFrame {
+func (err wrappedError) StackFrames() []StackFrame {
 	if err.frames == nil {
 		err.frames = make([]StackFrame, len(err.stack))
 
@@ -207,9 +222,9 @@ func (err *Error) StackFrames() []StackFrame {
 }
 
 // TypeName returns the type this error. e.g. *errors.stringError.
-func (err *Error) TypeName() string {
-	if _, ok := err.Err.(uncaughtPanic); ok {
+func (err wrappedError) TypeName() string {
+	if _, ok := err.err.(uncaughtPanic); ok {
 		return "panic"
 	}
-	return reflect.TypeOf(err.Err).String()
+	return reflect.TypeOf(err.err).String()
 }

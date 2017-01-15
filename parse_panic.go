@@ -13,7 +13,7 @@ func (p uncaughtPanic) Error() string {
 
 // ParsePanic allows you to get an error object from the output of a go program
 // that panicked. This is particularly useful with https://github.com/mitchellh/panicwrap.
-func ParsePanic(text string) (*Error, error) {
+func ParsePanic(text string) (Error, error) {
 	lines := strings.Split(text, "\n")
 
 	state := "start"
@@ -68,7 +68,7 @@ func ParsePanic(text string) (*Error, error) {
 	}
 
 	if state == "done" || state == "parsing" {
-		return &Error{Err: uncaughtPanic{message}, frames: stack}, nil
+		return &wrappedError{err: uncaughtPanic{message}, frames: stack}, nil
 	}
 	return nil, Errorf("could not parse panic: %v", text)
 }

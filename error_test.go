@@ -133,6 +133,28 @@ func TestWrapError(t *testing.T) {
 	}
 }
 
+// https://github.com/go-errors/errors/issues/3
+func TestNilError(t *testing.T) {
+
+	e := func() Error {
+		return nil
+	}()
+
+	var wrapped error
+	wrapped = func() *wrappedError {
+		return nil
+	}()
+
+	if e != nil {
+		t.Errorf("Error is not nil where it should be")
+	}
+
+	if wrapped == nil {
+		t.Errorf("*wrappedError is nil where it should not be")
+	}
+
+}
+
 func TestWrapPrefixError(t *testing.T) {
 
 	e := func() error {
@@ -148,10 +170,10 @@ func TestWrapPrefixError(t *testing.T) {
 		t.Errorf("Constructor with an error failed")
 	}
 
-	prefixed := WrapPrefix(e, "prefix", 0)
-	original := e.(*Error)
+	prefixed := WrapPrefix(e, "prefix", 0).(*wrappedError)
+	original := e.(*wrappedError)
 
-	if prefixed.Err != original.Err || &prefixed.stack != &original.stack || &prefixed.frames != &original.frames || prefixed.Error() != "prefix: prefix: hi" {
+	if prefixed.err != original.err || &prefixed.stack != &original.stack || &prefixed.frames != &original.frames || prefixed.Error() != "prefix: prefix: hi" {
 		t.Errorf("Constructor with an Error failed")
 	}
 
@@ -207,18 +229,18 @@ func ExampleError_Error(err error) {
 }
 
 func ExampleError_ErrorStack(err error) {
-	fmt.Println(err.(*Error).ErrorStack())
+	fmt.Println(err.(Error).ErrorStack())
 }
 
-func ExampleError_Stack(err *Error) {
+func ExampleError_Stack(err Error) {
 	fmt.Println(err.Stack())
 }
 
-func ExampleError_TypeName(err *Error) {
+func ExampleError_TypeName(err Error) {
 	fmt.Println(err.TypeName(), err.Error())
 }
 
-func ExampleError_StackFrames(err *Error) {
+func ExampleError_StackFrames(err Error) {
 	for _, frame := range err.StackFrames() {
 		fmt.Println(frame.File, frame.LineNumber, frame.Package, frame.Name)
 	}
