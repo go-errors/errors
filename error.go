@@ -118,7 +118,7 @@ func Wrap(e interface{}, skip int) *Error {
 // 1 from its caller, etc.
 func WrapPrefix(e interface{}, prefix string, skip int) *Error {
 
-	err := Wrap(e, skip)
+	err := Wrap(e, 1+skip)
 
 	if err.prefix != "" {
 		err.prefix = fmt.Sprintf("%s: %s", prefix, err.prefix)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"runtime/debug"
+	"strings"
 	"testing"
 )
 
@@ -139,7 +140,6 @@ func TestWrapPrefixError(t *testing.T) {
 		return WrapPrefix("hi", "prefix", 1)
 	}()
 
-	fmt.Println(e.Error())
 	if e.Error() != "prefix: hi" {
 		t.Errorf("Constructor with a string failed")
 	}
@@ -157,6 +157,10 @@ func TestWrapPrefixError(t *testing.T) {
 
 	if WrapPrefix(nil, "prefix", 0).Error() != "prefix: <nil>" {
 		t.Errorf("Constructor with nil failed")
+	}
+
+	if !strings.HasSuffix(original.StackFrames()[0].File, "error_test.go") || strings.HasSuffix(original.StackFrames()[1].File, "error_test.go") {
+		t.Errorf("Skip failed")
 	}
 }
 
