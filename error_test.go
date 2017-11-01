@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"reflect"
 	"runtime/debug"
 	"testing"
 )
@@ -151,8 +152,12 @@ func TestWrapPrefixError(t *testing.T) {
 	prefixed := WrapPrefix(e, "prefix", 0)
 	original := e.(*Error)
 
-	if prefixed.Err != original.Err || &prefixed.stack != &original.stack || &prefixed.frames != &original.frames || prefixed.Error() != "prefix: prefix: hi" {
+	if prefixed.Err != original.Err || !reflect.DeepEqual(prefixed.stack, original.stack) || !reflect.DeepEqual(prefixed.frames, original.frames) || prefixed.Error() != "prefix: prefix: hi" {
 		t.Errorf("Constructor with an Error failed")
+	}
+
+	if original.Error() == prefixed.Error() {
+		t.Errorf("WrapPrefix changed the original error")
 	}
 
 	if WrapPrefix(nil, "prefix", 0).Error() != "prefix: <nil>" {
