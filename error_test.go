@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-func TestStackFormatMatches(t *testing.T) {
+func TestStackFormat(t *testing.T) {
 
 	defer func() {
 		err := recover()
@@ -18,11 +18,24 @@ func TestStackFormatMatches(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		bs := [][]uintptr{Errorf("hi").stack, callers()}
+		e, expected := Errorf("hi"), callers()
+
+		bs := [][]uintptr{e.stack, expected}
 
 		if err := compareStacks(bs[0], bs[1]); err != nil {
 			t.Errorf("Stack didn't match")
 			t.Errorf(err.Error())
+		}
+
+		stack := string(e.Stack())
+
+		if !strings.Contains(stack, "a: b(5)") {
+			t.Errorf("Stack trace does not contain source line: 'a: b(5)'")
+			t.Errorf(stack)
+		}
+		if !strings.Contains(stack, "error_test.go:") {
+			t.Errorf("Stack trace does not contain file name: 'error_test.go:'")
+			t.Errorf(stack)
 		}
 	}()
 
