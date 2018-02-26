@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"io"
 	"reflect"
-	"runtime/debug"
+	"runtime"
 	"strings"
 	"testing"
 )
 
-func TestStackFormatMatches(t *testing.T) {
+func TestStackFormat(t *testing.T) {
 
 	defer func() {
 		err := recover()
@@ -18,16 +18,24 @@ func TestStackFormatMatches(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		bs := [][]byte{Errorf("hi").Stack(), debug.Stack()}
+		e, expected := Errorf("hi"), callers()
 
-		// Ignore the first line (as it contains the PC of the .Stack() call)
-		bs[0] = bytes.SplitN(bs[0], []byte("\n"), 2)[1]
-		bs[1] = bytes.SplitN(bs[1], []byte("\n"), 2)[1]
+		bs := [][]uintptr{e.stack, expected}
 
-		if bytes.Compare(bs[0], bs[1]) != 0 {
+		if err := compareStacks(bs[0], bs[1]); err != nil {
 			t.Errorf("Stack didn't match")
-			t.Errorf("%s", bs[0])
-			t.Errorf("%s", bs[1])
+			t.Errorf(err.Error())
+		}
+
+		stack := string(e.Stack())
+
+		if !strings.Contains(stack, "a: b(5)") {
+			t.Errorf("Stack trace does not contain source line: 'a: b(5)'")
+			t.Errorf(stack)
+		}
+		if !strings.Contains(stack, "error_test.go:") {
+			t.Errorf("Stack trace does not contain file name: 'error_test.go:'")
+			t.Errorf(stack)
 		}
 	}()
 
@@ -42,15 +50,11 @@ func TestSkipWorks(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		bs := [][]byte{Wrap("hi", 2).Stack(), debug.Stack()}
+		bs := [][]uintptr{Wrap("hi", 2).stack, callersSkip(2)}
 
-		// should skip four lines of debug.Stack()
-		bs[1] = bytes.SplitN(bs[1], []byte("\n"), 5)[4]
-
-		if bytes.Compare(bs[0], bs[1]) != 0 {
+		if err := compareStacks(bs[0], bs[1]); err != nil {
 			t.Errorf("Stack didn't match")
-			t.Errorf("%s", bs[0])
-			t.Errorf("%s", bs[1])
+			t.Errorf(err.Error())
 		}
 	}()
 
@@ -71,16 +75,11 @@ func TestNew(t *testing.T) {
 		t.Errorf("Wrong message")
 	}
 
-	bs := [][]byte{New("foo").Stack(), debug.Stack()}
+	bs := [][]uintptr{New("foo").stack, callers()}
 
-	// Ignore the first line (as it contains the PC of the .Stack() call)
-	bs[0] = bytes.SplitN(bs[0], []byte("\n"), 2)[1]
-	bs[1] = bytes.SplitN(bs[1], []byte("\n"), 2)[1]
-
-	if bytes.Compare(bs[0], bs[1]) != 0 {
+	if err := compareStacks(bs[0], bs[1]); err != nil {
 		t.Errorf("Stack didn't match")
-		t.Errorf("%s", bs[0])
-		t.Errorf("%s", bs[1])
+		t.Errorf(err.Error())
 	}
 
 	if err.ErrorStack() != err.TypeName()+" "+err.Error()+"\n"+string(err.Stack()) {
@@ -244,4 +243,62 @@ func b(i int) {
 
 func c() {
 	panic('a')
+}
+
+// compareStacks will compare a stack created using the errors package (actual)
+// with a reference stack created with the callers function (expected). The
+// first entry is compared inexact since the actual and expected stacks cannot
+// be created at the exact same program counter position so the first entry
+// will always differ somewhat. Returns nil if the stacks are equal enough and
+// an error containing a detailed error message otherwise.
+func compareStacks(actual, expected []uintptr) error {
+	if len(actual) != len(expected) {
+		return stackCompareError("Stacks does not have equal length", actual, expected)
+	}
+	for i, pc := range actual {
+		if i == 0 {
+			firstEntryDiff := (int)(expected[i]) - (int)(pc)
+			if firstEntryDiff < -27 || firstEntryDiff > 27 {
+				return stackCompareError(fmt.Sprintf("First entry PC diff to large (%d)", firstEntryDiff), actual, expected)
+			}
+		} else if pc != expected[i] {
+			return stackCompareError(fmt.Sprintf("Stacks does not match entry %d (and maybe others)", i), actual, expected)
+		}
+	}
+	return nil
+}
+
+func stackCompareError(msg string, actual, expected []uintptr) error {
+	return fmt.Errorf("%s\nActual stack trace:\n%s\nExpected stack trace:\n%s", msg, readableStackTrace(actual), readableStackTrace(expected))
+}
+
+func callers() []uintptr {
+	return callersSkip(1)
+}
+
+func callersSkip(skip int) []uintptr {
+	callers := make([]uintptr, MaxStackDepth)
+	length := runtime.Callers(skip+2, callers[:])
+	return callers[:length]
+}
+
+func readableStackTrace(callers []uintptr) string {
+	var result bytes.Buffer
+	frames := callersToFrames(callers)
+	for _, frame := range frames {
+		result.WriteString(fmt.Sprintf("%s:%d (%#x)\n\t%s\n", frame.File, frame.Line, frame.PC, frame.Function))
+	}
+	return result.String()
+}
+
+func callersToFrames(callers []uintptr) []runtime.Frame {
+	frames := make([]runtime.Frame, 0, len(callers))
+	framesPtr := runtime.CallersFrames(callers)
+	for {
+		frame, more := framesPtr.Next()
+		frames = append(frames, frame)
+		if !more {
+			return frames
+		}
+	}
 }
