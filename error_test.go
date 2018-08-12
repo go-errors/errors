@@ -129,7 +129,7 @@ func TestWrapError(t *testing.T) {
 		t.Errorf("Constructor with an Error failed")
 	}
 
-	if Wrap(nil, 0).Error() != "<nil>" {
+	if Wrap(nil, 0) != nil {
 		t.Errorf("Constructor with nil failed")
 	}
 }
@@ -159,7 +159,7 @@ func TestWrapPrefixError(t *testing.T) {
 		t.Errorf("WrapPrefix changed the original error")
 	}
 
-	if WrapPrefix(nil, "prefix", 0).Error() != "prefix: <nil>" {
+	if WrapPrefix(nil, "prefix", 0) != nil {
 		t.Errorf("Constructor with nil failed")
 	}
 
