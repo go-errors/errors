@@ -10,6 +10,26 @@ import (
 	"testing"
 )
 
+func BenchmarkStackFormat(b *testing.B) {
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		func() {
+			defer func() {
+				err := recover()
+				if err != 'a' {
+					b.Fatal(err)
+				}
+
+				e := Errorf("hi")
+				_ = string(e.Stack())
+			}()
+
+			a()
+		}()
+	}
+}
+
 func TestStackFormat(t *testing.T) {
 
 	defer func() {
