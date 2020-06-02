@@ -47,7 +47,6 @@ package errors
 
 import (
 	"bytes"
-	baseErrors "errors"
 	"fmt"
 	"reflect"
 	"runtime"
@@ -140,24 +139,6 @@ func WrapPrefix(e interface{}, prefix string, skip int) *Error {
 
 }
 
-// Is detects whether the error is equal to a given error. Errors
-// are considered equal by this function if they are matched by errors.Is
-// or if their contained errors are matched through errors.Is
-func Is(e error, original error) bool {
-	if baseErrors.Is(e, original) {
-		return true
-	}
-
-	if e, ok := e.(*Error); ok {
-		return Is(e.Err, original)
-	}
-
-	if original, ok := original.(*Error); ok {
-		return Is(e, original.Err)
-	}
-
-	return false
-}
 
 // Errorf creates a new error with the given message. You can use it
 // as a drop-in replacement for fmt.Errorf() to provide descriptive
