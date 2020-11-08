@@ -202,3 +202,8 @@ func (err *Error) TypeName() string {
 	}
 	return reflect.TypeOf(err.Err).String()
 }
+
+// Return the wrapped error (implements api for As function).
+func (err *Error) Unwrap() error {
+	return err.Err
+}
