@@ -59,7 +59,7 @@ type errorWithCustomIs struct {
 }
 
 func (ewci errorWithCustomIs) Error() string {
-	return "["+ewci.Key+"]: " + ewci.Err.Error()
+	return "[" + ewci.Key + "]: " + ewci.Err.Error()
 }
 
 func (ewci errorWithCustomIs) Is(target error) bool {
