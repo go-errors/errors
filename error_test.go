@@ -30,6 +30,29 @@ func BenchmarkStackFormat(b *testing.B) {
 	}
 }
 
+func TestAs(t *testing.T) {
+	var errStrIn errorString = "TestForFun"
+
+	var errStrOut errorString
+	if As(errStrIn, &errStrOut) {
+		if errStrOut != "TestForFun" {
+			t.Errorf("direct errStr value is not returned")
+		}
+	} else {
+		t.Errorf("direct errStr is not returned")
+	}
+
+	errStrOut = ""
+	err := Wrap(errStrIn, 0)
+	if As(err, &errStrOut) {
+		if errStrOut != "TestForFun" {
+			t.Errorf("wrapped errStr value is not returned")
+		}
+	} else {
+		t.Errorf("wrapped errStr is not returned")
+	}
+}
+
 func TestStackFormat(t *testing.T) {
 
 	defer func() {
@@ -315,4 +338,10 @@ func callersToFrames(callers []uintptr) []runtime.Frame {
 			return frames
 		}
 	}
+}
+
+type errorString string
+
+func (e errorString) Error() string {
+	return string(e)
 }
