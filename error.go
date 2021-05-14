@@ -207,10 +207,3 @@ func (err *Error) TypeName() string {
 func (err *Error) Unwrap() error {
 	return err.Err
 }
-
-// AsError converts e to an *errors.Error.
-// If e does not already have a stacktrace attached, the current stack
-// will be added.
-func AsError(e error) *Error {
-	return Wrap(e, 1).(*Error)
-}
