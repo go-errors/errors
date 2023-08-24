@@ -9,7 +9,7 @@ This is particularly useful when you want to understand the state of execution
 when an error was returned unexpectedly.
 
 It provides the type \*Error which implements the standard golang error
-interface, so you can use this library interchangably with code that is
+interface, so you can use this library interchangeably with code that is
 expecting a normal error return.
 
 Usage
