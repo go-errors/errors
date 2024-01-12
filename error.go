@@ -86,10 +86,13 @@ func New(e interface{}) *Error {
 	}
 }
 
-// Wrap makes an Error from the given value. If that value is already an
-// error then it will be used directly, if not, it will be passed to
-// fmt.Errorf("%v"). The skip parameter indicates how far up the stack
-// to start the stacktrace. 0 is from the current call, 1 from its caller, etc.
+// Wrap makes an Error from the given value. If that value is already an *Error
+// it will not be wrapped and instead will be returned without modification. If
+// that value is already an error then it will be used directly and wrapped.
+// Otherwise, the value will be passed to fmt.Errorf("%v") and then wrapped. To
+// explicitly wrap an *Error with a new stacktrace use Errorf. The skip
+// parameter indicates how far up the stack to start the stacktrace. 0 is from
+// the current call, 1 from its caller, etc.
 func Wrap(e interface{}, skip int) *Error {
 	if e == nil {
 		return nil
@@ -115,11 +118,14 @@ func Wrap(e interface{}, skip int) *Error {
 }
 
 // WrapPrefix makes an Error from the given value. If that value is already an
-// error then it will be used directly, if not, it will be passed to
-// fmt.Errorf("%v"). The prefix parameter is used to add a prefix to the
-// error message when calling Error(). The skip parameter indicates how far
-// up the stack to start the stacktrace. 0 is from the current call,
-// 1 from its caller, etc.
+// *Error it will not be wrapped and instead will be returned without
+// modification. If that value is already an error then it will be used
+// directly and wrapped.  Otherwise, the value will be passed to
+// fmt.Errorf("%v") and then wrapped. To explicitly wrap an *Error with a new
+// stacktrace use Errorf. The prefix parameter is used to add a prefix to the
+// error message when calling Error(). The skip parameter indicates how far up
+// the stack to start the stacktrace. 0 is from the current call, 1 from its
+// caller, etc.
 func WrapPrefix(e interface{}, prefix string, skip int) *Error {
 	if e == nil {
 		return nil
