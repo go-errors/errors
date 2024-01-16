@@ -345,3 +345,42 @@ type errorString string
 func (e errorString) Error() string {
 	return string(e)
 }
+
+type errorStruct struct {
+	message string
+}
+
+func (e errorStruct) Error() string {
+	return e.message
+}
+
+type errorStructPtr struct {
+	message string
+}
+
+func (e *errorStructPtr) Error() string {
+	return e.message
+}
+
+func TestUninitializedErr(t *testing.T) {
+	var (
+		err          = error(nil)
+		errStruct    errorStruct
+		errStructPtr *errorStructPtr
+	)
+
+	err = WrapPrefix(err, "blah message", 0)
+	if err != (*Error)(nil) || !IsUninitialized(err) {
+		t.Errorf("Expected wrapped base error to be nil. Got %v", err)
+	}
+
+	err = WrapPrefix(errStruct, "blah message", 0)
+	if err != (*Error)(nil) || !IsUninitialized(err) {
+		t.Errorf("Expected wrapped errStruct to be nil. Got %v", err)
+	}
+
+	err = WrapPrefix(errStructPtr, "blah message", 0)
+	if err != (*Error)(nil) || !IsUninitialized(err) {
+		t.Errorf("Expected wrapped errStructPtr to be nil. Got %v", err)
+	}
+}
