@@ -345,3 +345,24 @@ type errorString string
 func (e errorString) Error() string {
 	return string(e)
 }
+
+type typedNilError struct{ message string }
+
+func (e *typedNilError) Error() string { return e.message }
+
+func TestWrapTypedNil(t *testing.T) {
+	var ptr *typedNilError
+	if Wrap(ptr, 0) != nil {
+		t.Errorf("Wrap typed nil pointer should return nil")
+	}
+	if WrapPrefix(ptr, "prefix", 0) != nil {
+		t.Errorf("WrapPrefix typed nil pointer should return nil")
+	}
+	if Wrap(nil, 0) != nil || WrapPrefix(nil, "p", 0) != nil {
+		t.Errorf("Wrap/WrapPrefix nil should return nil")
+	}
+	nonNil := &typedNilError{message: "x"}
+	if Wrap(nonNil, 0) == nil {
+		t.Errorf("Wrap non-nil pointer should wrap")
+	}
+}
