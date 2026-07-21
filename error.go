@@ -93,8 +93,25 @@ func New(e interface{}) *Error {
 // explicitly wrap an *Error with a new stacktrace use Errorf. The skip
 // parameter indicates how far up the stack to start the stacktrace. 0 is from
 // the current call, 1 from its caller, etc.
-func Wrap(e interface{}, skip int) *Error {
+
+// isNil reports whether e is a nil interface value or a typed nil
+// (nil pointer/slice/map/func/chan/interface). Zero-value structs that
+// implement error are not considered nil.
+func isNil(e interface{}) bool {
 	if e == nil {
+		return true
+	}
+	v := reflect.ValueOf(e)
+	switch v.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice, reflect.UnsafePointer:
+		return v.IsNil()
+	default:
+		return false
+	}
+}
+
+func Wrap(e interface{}, skip int) *Error {
+	if isNil(e) {
 		return nil
 	}
 
@@ -127,7 +144,7 @@ func Wrap(e interface{}, skip int) *Error {
 // the stack to start the stacktrace. 0 is from the current call, 1 from its
 // caller, etc.
 func WrapPrefix(e interface{}, prefix string, skip int) *Error {
-	if e == nil {
+	if isNil(e) {
 		return nil
 	}
 
