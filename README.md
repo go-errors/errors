@@ -82,3 +82,7 @@ This package is licensed under the MIT license, see LICENSE.MIT for details.
 * v1.4.2 performance improvement to ErrorStack() to avoid unnecessary work https://github.com/go-errors/errors/pull/40
 * v1.5.0 add errors.Join() and errors.Unwrap() copying the stdlib https://github.com/go-errors/errors/pull/40
 * v1.5.1 fix build on go1.13..go1.19 (broken by adding Join and Unwrap with wrong build constraints)
+* v1.5.2 errors.Is and errors.As now traverse errors.Join on go<1.20, matching go1.20+ behaviour
+> Previously only errors.Join itself was backported, so on go1.13..go1.19 the stdlib errors.Is and
+> errors.As could not see through a joined error and `errors.Is(errors.Join(err1, err2), err1)`
+> returned false, while it returned true on go1.20 and later.
